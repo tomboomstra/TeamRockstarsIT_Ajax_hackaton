@@ -349,6 +349,11 @@ So you get smooth $p(t)$, $v(t)$, and $a(t)$ with one consistent method.
 
 For high-speed events like ball contact you may want a shorter window (e.g., 0.10–0.15 s). For running speed you can go longer.
 
+For 2d tracking data we use:
+15 frame window (25fps)
+For accl 9
+Polyorder 2 
+
 ```python
 from scipy.signal import savgol_filter
 
