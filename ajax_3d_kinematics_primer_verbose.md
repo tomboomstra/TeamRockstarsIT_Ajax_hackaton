@@ -637,6 +637,12 @@ $$
 
 We keep radians in most computations (because angular velocity naturally ends up in rad/s), and convert to degrees only for plotting or interpretation.
 
+**KPIS***
+In 2d example KPIs are:
+Time to Sprint: The minimum time spent between 9 km/h and 25 km/h when achieving an Explosive Acceleration to Sprint during a performance.
+Time to 505 around 180:  the time a running player takes to cover the final 5 meters before a tight turn around 180° [150°-210°] plus the 5 first meters after it. 
+Time to HSR Post-COD: the minimum time spent between 9 km/h and 20 km/h (5.5 m/s) when achieving an Explosive Acceleration to HSR after a change of direction during a performance.
+
 ### 4.1 Knee angle (simple 3D hinge proxy)
 At the knee, define:
 - thigh vector: `hip - knee`
