@@ -283,6 +283,78 @@ def read_tf15_parquet_flat(path: str) -> Tuple[MatchMeta, pd.DataFrame, pd.DataF
     return meta, parts_df, ball_df
 ```
 
+Don't know how fast this is, but if you want quick processing can also use
+
+```python
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+
+import polars as pl
+
+
+@dataclass(frozen=True)
+class MatchMeta:
+    framerate: float
+
+
+def read_tf15_parquet(path: str | Path, framerate: float = 25.0) -> tuple[MatchMeta, pl.DataFrame, pl.DataFrame]:
+    """
+    Returns:
+      meta:     MatchMeta
+      parts_df: frame, t, team, jersey, part_id, x, y, z  (one row per skeleton part per frame)
+      ball_df:  frame, t, bx, by, bz, bvx, bvy, bvz       (one row per frame where ball exists)
+    """
+    df = pl.read_parquet(path)
+    meta = MatchMeta(framerate=framerate)
+    dt = 1.0 / framerate
+
+    ball_df = (
+        df
+        .filter(pl.col("ball_exists"))
+        .select(
+            pl.col("frame_number").alias("frame"),
+            (pl.col("frame_number") * dt).alias("t"),
+            pl.col("ball").struct.field("position_x").alias("bx"),
+            pl.col("ball").struct.field("position_y").alias("by"),
+            pl.col("ball").struct.field("position_z").alias("bz"),
+            pl.col("ball").struct.field("velocity_x").alias("bvx"),
+            pl.col("ball").struct.field("velocity_y").alias("bvy"),
+            pl.col("ball").struct.field("velocity_z").alias("bvz"),
+        )
+        .sort("frame")
+    )
+
+    parts_df = (
+        df
+        .select(
+            pl.col("frame_number").alias("frame"),
+            (pl.col("frame_number") * dt).alias("t"),
+            pl.col("skeletons"),
+        )
+        .explode("skeletons")
+        .with_columns(
+            pl.col("skeletons").struct.field("team").alias("team"),
+            pl.col("skeletons").struct.field("jersey_number").alias("jersey"),
+            pl.col("skeletons").struct.field("parts").alias("parts"),
+        )
+        .drop("skeletons")
+        .explode("parts")
+        .with_columns(
+            pl.col("parts").struct.field("name").alias("part_id"),
+            pl.col("parts").struct.field("position_x").alias("x"),
+            pl.col("parts").struct.field("position_y").alias("y"),
+            pl.col("parts").struct.field("position_z").alias("z"),
+        )
+        .drop("parts")
+        .sort(["frame", "team", "jersey", "part_id"])
+    )
+
+    return meta, parts_df, ball_df
+```
+
+
 **Notes**
 - The field names (`frame_number`, `skeletons`, `parts`, …) follow the TF15 spec.
 - If your Parquet exporter stores metadata differently, adjust how `framerate` and `frame_number` are read.
